@@ -30,11 +30,39 @@
             padding: 12px; 
             border: 1px solid #ccc; 
             border-radius: 8px; 
-            font-size: 15px; 
+            font-size: 14px; 
             background-color: #fafafa;
         }
         textarea { height: 90px; resize: vertical; }
         
+        /* Desain Khusus Pilihan Foto (Kamera vs Galeri) */
+        .foto-option-box {
+            background-color: #f8f9fa;
+            border: 1px dashed #1a4d2e;
+            padding: 12px;
+            border-radius: 8px;
+        }
+        .foto-subgroup {
+            margin-bottom: 10px;
+        }
+        .foto-subgroup:last-child {
+            margin-bottom: 0;
+        }
+        .foto-label-sub {
+            font-size: 12px;
+            font-weight: bold;
+            color: #1a4d2e;
+            margin-bottom: 4px;
+            display: block;
+        }
+        .file-selected-info {
+            font-size: 11px;
+            color: #27ae60;
+            font-weight: bold;
+            margin-top: 4px;
+            display: block;
+        }
+
         /* Area Canvas Tanda Tangan */
         .signature-container {
             border: 2px dashed #1a4d2e;
@@ -108,7 +136,7 @@
         }
         .btn:active { background: #143d24; transform: translateY(1px); }
         
-        /* TEMPLATE PDF (Kop Teks Tanpa Logo Gambar) */
+        /* TEMPLATE PDF (Kop Teks Resmi Tanpa Logo Gambar) */
         #pdf-template { 
             display: none; 
             width: 700px; 
@@ -163,13 +191,28 @@
             <textarea id="kegiatan" placeholder="Tuliskan ringkasan kegiatan..." required></textarea>
         </div>
 
-        <!-- Input Foto: Bisa Memilih dari Kamera atau Galeri -->
+        <!-- Kolom Pilihan Foto Kegiatan (Kamera Langsung ATAU Dari Galeri) -->
         <div class="form-group">
-            <label for="foto">Foto Kegiatan (Kamera / Galeri):</label>
-            <input type="file" id="foto" accept="image/*" required>
+            <label>Foto Kegiatan (Pilih salah satu):</label>
+            <div class="foto-option-box">
+                <!-- Opsi A: Ambil Foto Pakai Kamera HP -->
+                <div class="foto-subgroup">
+                    <span class="foto-label-sub">📸 Opsi 1: Ambil Langsung dari Kamera</span>
+                    <input type="file" id="foto-kamera" accept="image/*" capture="environment" onchange="handleFotoChange('kamera')">
+                </div>
+                
+                <hr style="border: 0; border-top: 1px solid #ddd; margin: 10px 0;">
+                
+                <!-- Opsi B: Ambil Foto dari Galeri HP -->
+                <div class="foto-subgroup">
+                    <span class="foto-label-sub">🖼️ Opsi 2: Pilih Foto dari Galeri HP</span>
+                    <input type="file" id="foto-galeri" accept="image/*" onchange="handleFotoChange('galeri')">
+                </div>
+            </div>
+            <span id="foto-selected-text" class="file-selected-info"></span>
         </div>
 
-        <!-- Kolom Tanda Tangan Digital + Tombol Simpan & Hapus -->
+        <!-- Kolom Tanda Tangan Digital + Simpan & Hapus -->
         <div class="form-group">
             <label>Tanda Tangan Digital Guru:</label>
             <div class="signature-container">
@@ -188,7 +231,7 @@
     </form>
 </div>
 
-<!-- TEMPLATE CETAK PDF -->
+<!-- TEMPLATE CETAK PDF (Kop Teks Tanpa Logo Gambar) -->
 <div id="pdf-template">
     <div class="header-kop">
         <h3>PEMERINTAH KABUPATEN SIDOARJO</h3>
@@ -233,6 +276,25 @@
 </div>
 
 <script>
+    // --- SKRIP MANAJEMEN INPUT FOTO (KAMERA VS GALERI) ---
+    let selectedFile = null;
+
+    function handleFotoChange(source) {
+        const kameraInput = document.getElementById('foto-kamera');
+        const galeriInput = document.getElementById('foto-galeri');
+        const infoText = document.getElementById('foto-selected-text');
+
+        if (source === 'kamera' && kameraInput.files.length > 0) {
+            selectedFile = kameraInput.files[0];
+            galeriInput.value = ""; // Reset opsi galeri
+            infoText.innerText = "✓ Foto dari Kamera berhasil dipilih";
+        } else if (source === 'galeri' && galeriInput.files.length > 0) {
+            selectedFile = galeriInput.files[0];
+            kameraInput.value = ""; // Reset opsi kamera
+            infoText.innerText = "✓ Foto dari Galeri berhasil dipilih";
+        }
+    }
+
     // --- SKRIP TANDA TANGAN (CANVAS & MEMORI PERMANEN) ---
     const canvas = document.getElementById('sig-canvas');
     const ctx = canvas.getContext('2d');
@@ -249,7 +311,6 @@
         ctx.lineCap = 'round';
         ctx.strokeStyle = '#000000';
         
-        // Cek apakah ada TTD tersimpan saat ukuran canvas disesuaikan
         loadSavedSignature();
     }
     
@@ -273,7 +334,7 @@
     function draw(e) {
         if (!isDrawing) return;
         isSigned = true;
-        statusText.innerText = ""; // Hapus teks jika menggambar baru
+        statusText.innerText = "";
         const pos = getPos(e);
         ctx.lineTo(pos.x, pos.y);
         ctx.stroke();
@@ -290,7 +351,6 @@
     canvas.addEventListener('touchmove', draw);
     canvas.addEventListener('touchend', stopDrawing);
 
-    // Fitur Simpan TTD ke LocalStorage HP
     function saveSignaturePermanently() {
         if (!isSigned) {
             alert('Buat tanda tangan di kotak terlebih dahulu sebelum menyimpan!');
@@ -302,7 +362,6 @@
         alert('Tanda tangan berhasil disimpan di HP Anda! Anda tidak perlu menggambar ulang saat membuka web ini lagi.');
     }
 
-    // Fitur Muat TTD yang Tersimpan
     function loadSavedSignature() {
         const savedData = localStorage.getItem('saved_signature_smpn2');
         if (savedData) {
@@ -317,7 +376,6 @@
         }
     }
 
-    // Fitur Hapus TTD (Hapus Layar & Hapus dari Memori)
     function clearSignature() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         isSigned = false;
@@ -325,7 +383,6 @@
         statusText.innerText = "";
     }
 
-    // Inisialisasi awal saat halaman dibuka
     setTimeout(resizeCanvas, 200);
 
     // --- SKRIP GENERATE PDF ---
@@ -333,10 +390,9 @@
         const fasilitator = document.getElementById('fasilitator').value;
         const kelas = document.getElementById('kelas').value;
         const kegiatan = document.getElementById('kegiatan').value;
-        const fotoInput = document.getElementById('foto');
 
-        if (!fasilitator || !kelas || !kegiatan || fotoInput.files.length === 0) {
-            alert('Mohon lengkapi nama, kelas, isi kegiatan, dan unggah foto!');
+        if (!fasilitator || !kelas || !kegiatan || !selectedFile) {
+            alert('Mohon lengkapi nama, kelas, isi kegiatan, dan pilih foto (Kamera/Galeri)!');
             return;
         }
 
@@ -360,7 +416,6 @@
         const options = { day: 'numeric', month: 'long', year: 'numeric' };
         document.getElementById('pdf-tanggal').innerText = today.toLocaleDateString('id-ID', options);
 
-        const file = fotoInput.files[0];
         const reader = new FileReader();
 
         reader.onload = function (e) {
@@ -389,7 +444,7 @@
             });
         };
 
-        reader.readAsDataURL(file);
+        reader.readAsDataURL(selectedFile);
     }
 </script>
 
