@@ -41,7 +41,7 @@
             border-radius: 8px;
             background-color: #fff;
             position: relative;
-            touch-action: none; /* Penting agar layar HP tidak bergeser saat TTD */
+            touch-action: none;
         }
         canvas {
             width: 100%;
@@ -50,19 +50,49 @@
             border-radius: 8px;
             cursor: crosshair;
         }
-        .btn-clear {
-            background: #d9534f;
+        
+        /* Baris Tombol Aksi Tanda Tangan */
+        .ttd-action-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 8px;
+        }
+        
+        .ttd-status {
+            font-size: 12px;
+            color: #27ae60;
+            font-weight: bold;
+        }
+
+        .btn-ttd-group {
+            display: flex;
+            gap: 6px;
+        }
+
+        .btn-save-ttd {
+            background: #27ae60;
             color: white;
             border: none;
-            padding: 6px 12px;
+            padding: 6px 10px;
             font-size: 12px;
             border-radius: 4px;
             cursor: pointer;
-            margin-top: 5px;
-            float: right;
+            font-weight: 600;
+        }
+
+        .btn-clear-ttd {
+            background: #d9534f;
+            color: white;
+            border: none;
+            padding: 6px 10px;
+            font-size: 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
         }
         
-        /* Tombol Unduh */
+        /* Tombol Unduh Utama */
         .btn { 
             background: #1a4d2e; 
             color: white; 
@@ -75,7 +105,6 @@
             font-weight: bold; 
             margin-top: 15px; 
             box-shadow: 0 3px 6px rgba(0,0,0,0.1);
-            clear: both;
         }
         .btn:active { background: #143d24; transform: translateY(1px); }
         
@@ -134,19 +163,25 @@
             <textarea id="kegiatan" placeholder="Tuliskan ringkasan kegiatan..." required></textarea>
         </div>
 
-        <!-- PERBAIKAN: Menghapus capture="environment" agar HP menampilkan pilihan Kamera & Galeri -->
+        <!-- Input Foto: Bisa Memilih dari Kamera atau Galeri -->
         <div class="form-group">
             <label for="foto">Foto Kegiatan (Kamera / Galeri):</label>
             <input type="file" id="foto" accept="image/*" required>
         </div>
 
-        <!-- Kolom Tanda Tangan Digital Langsung -->
+        <!-- Kolom Tanda Tangan Digital + Tombol Simpan & Hapus -->
         <div class="form-group">
             <label>Tanda Tangan Digital Guru:</label>
             <div class="signature-container">
                 <canvas id="sig-canvas"></canvas>
             </div>
-            <button type="button" class="btn-clear" onclick="clearSignature()">Hapus Tanda Tangan</button>
+            <div class="ttd-action-bar">
+                <span id="ttd-status-text" class="ttd-status"></span>
+                <div class="btn-ttd-group">
+                    <button type="button" class="btn-save-ttd" onclick="saveSignaturePermanently()">💾 Simpan TTD</button>
+                    <button type="button" class="btn-clear-ttd" onclick="clearSignature()">🗑️ Hapus TTD</button>
+                </div>
+            </div>
         </div>
 
         <button type="button" class="btn" onclick="generateAndDownloadPDF()">📱 Unduh Berita Acara (PDF)</button>
@@ -198,9 +233,10 @@
 </div>
 
 <script>
-    // --- SKRIP SKETSA TANDA TANGAN (CANVAS) ---
+    // --- SKRIP TANDA TANGAN (CANVAS & MEMORI PERMANEN) ---
     const canvas = document.getElementById('sig-canvas');
     const ctx = canvas.getContext('2d');
+    const statusText = document.getElementById('ttd-status-text');
     let isDrawing = false;
     let isSigned = false;
 
@@ -212,9 +248,12 @@
         ctx.lineWidth = 2.5;
         ctx.lineCap = 'round';
         ctx.strokeStyle = '#000000';
+        
+        // Cek apakah ada TTD tersimpan saat ukuran canvas disesuaikan
+        loadSavedSignature();
     }
+    
     window.addEventListener('resize', resizeCanvas);
-    setTimeout(resizeCanvas, 200);
 
     function getPos(e) {
         const rect = canvas.getBoundingClientRect();
@@ -234,6 +273,7 @@
     function draw(e) {
         if (!isDrawing) return;
         isSigned = true;
+        statusText.innerText = ""; // Hapus teks jika menggambar baru
         const pos = getPos(e);
         ctx.lineTo(pos.x, pos.y);
         ctx.stroke();
@@ -250,10 +290,43 @@
     canvas.addEventListener('touchmove', draw);
     canvas.addEventListener('touchend', stopDrawing);
 
+    // Fitur Simpan TTD ke LocalStorage HP
+    function saveSignaturePermanently() {
+        if (!isSigned) {
+            alert('Buat tanda tangan di kotak terlebih dahulu sebelum menyimpan!');
+            return;
+        }
+        const dataURL = canvas.toDataURL();
+        localStorage.setItem('saved_signature_smpn2', dataURL);
+        statusText.innerText = "✓ Tersimpan di HP";
+        alert('Tanda tangan berhasil disimpan di HP Anda! Anda tidak perlu menggambar ulang saat membuka web ini lagi.');
+    }
+
+    // Fitur Muat TTD yang Tersimpan
+    function loadSavedSignature() {
+        const savedData = localStorage.getItem('saved_signature_smpn2');
+        if (savedData) {
+            const img = new Image();
+            img.onload = function() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0, canvas.offsetWidth, canvas.offsetHeight);
+                isSigned = true;
+                statusText.innerText = "✓ TTD Tersimpan Dimuat";
+            };
+            img.src = savedData;
+        }
+    }
+
+    // Fitur Hapus TTD (Hapus Layar & Hapus dari Memori)
     function clearSignature() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         isSigned = false;
+        localStorage.removeItem('saved_signature_smpn2');
+        statusText.innerText = "";
     }
+
+    // Inisialisasi awal saat halaman dibuka
+    setTimeout(resizeCanvas, 200);
 
     // --- SKRIP GENERATE PDF ---
     function generateAndDownloadPDF() {
