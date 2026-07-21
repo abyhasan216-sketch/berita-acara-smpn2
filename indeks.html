@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Berita Acara Kokurikuler - SMPN 2 Krembung</title>
+    <!-- Library html2pdf.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <style>
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        body { background-color: #f0f2f5; margin: 0; padding: 12px; }
+        
+        /* Container Utama Form */
+        .container { 
+            max-width: 600px; 
+            margin: 0 auto; 
+            background: #ffffff; 
+            padding: 20px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08); 
+        }
+        
+        h2 { text-align: center; color: #1a4d2e; margin-top: 0; margin-bottom: 18px; font-size: 20px; }
+        .form-group { margin-bottom: 15px; }
+        label { font-weight: 600; display: block; margin-bottom: 6px; color: #333; font-size: 14px; }
+        
+        input[type="text"], textarea, input[type="file"] { 
+            width: 100%; 
+            padding: 12px; 
+            border: 1px solid #ccc; 
+            border-radius: 8px; 
+            font-size: 15px; 
+            background-color: #fafafa;
+        }
+        textarea { height: 90px; resize: vertical; }
+        
+        /* Area Canvas Tanda Tangan */
+        .signature-container {
+            border: 2px dashed #1a4d2e;
+            border-radius: 8px;
+            background-color: #fff;
+            position: relative;
+            touch-action: none; /* Penting agar layar HP tidak bergeser saat TTD */
+        }
+        canvas {
+            width: 100%;
+            height: 150px;
+            display: block;
+            border-radius: 8px;
+            cursor: crosshair;
+        }
+        .btn-clear {
+            background: #d9534f;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            font-size: 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 5px;
+            float: right;
+        }
+        
+        /* Tombol Unduh */
+        .btn { 
+            background: #1a4d2e; 
+            color: white; 
+            border: none; 
+            padding: 14px; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-size: 16px; 
+            width: 100%; 
+            font-weight: bold; 
+            margin-top: 15px; 
+            box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+            clear: both;
+        }
+        .btn:active { background: #143d24; transform: translateY(1px); }
+        
+        /* TEMPLATE PDF (Tanpa Logo Tambahan) */
+        #pdf-template { 
+            display: none; 
+            width: 700px; 
+            padding: 30px; 
+            background: white;
+            font-family: "Times New Roman", Times, serif; 
+            color: #000;
+        }
+        
+        .header-kop { 
+            text-align: center; 
+            border-bottom: 3px double #000;
+            padding-bottom: 8px;
+            margin-bottom: 20px;
+        }
+        .header-kop h3 { margin: 0; font-size: 15pt; text-transform: uppercase; }
+        .header-kop h4 { margin: 3px 0; font-size: 13pt; text-transform: uppercase; }
+        .header-kop p { margin: 0; font-size: 9.5pt; font-style: italic; }
+        
+        .judul-ba { text-align: center; font-weight: bold; font-size: 13pt; margin: 15px 0; text-decoration: underline; text-transform: uppercase; }
+        .table-data { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+        .table-data td { padding: 6px 4px; vertical-align: top; font-size: 11pt; }
+        .table-data td.label { width: 28%; font-weight: bold; }
+        .table-data td.separator { width: 2%; }
+        
+        .foto-container { text-align: center; margin-top: 15px; }
+        .foto-container img { max-width: 380px; max-height: 220px; border: 1px solid #ccc; padding: 4px; border-radius: 4px; object-fit: contain; }
+        
+        /* Bagian Tanda Tangan PDF */
+        .ttd-section { margin-top: 25px; float: right; width: 230px; text-align: center; font-size: 11pt; }
+        .ttd-image-pdf { width: 150px; height: 70px; object-fit: contain; margin: 5px 0; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Berita Acara Kokurikuler<br><small style="font-size: 13px; color: #666; font-weight: normal;">SMPN 2 Krembung</small></h2>
+    
+    <form id="baForm">
+        <div class="form-group">
+            <label for="fasilitator">Nama Fasilitator / Guru:</label>
+            <input type="text" id="fasilitator" placeholder="Nama lengkap & gelar" required>
+        </div>
+
+        <div class="form-group">
+            <label for="kelas">Kelas:</label>
+            <input type="text" id="kelas" placeholder="Contoh: VII-A" required>
+        </div>
+
+        <div class="form-group">
+            <label for="kegiatan">Uraian / Isi Kegiatan:</label>
+            <textarea id="kegiatan" placeholder="Tuliskan ringkasan kegiatan..." required></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="foto">Foto Kegiatan (Kamera / Galeri):</label>
+            <input type="file" id="foto" accept="image/*" capture="environment" required>
+        </div>
+
+        <!-- Kolom Tanda Tangan Langsung -->
+        <div class="form-group">
+            <label>Tanda Tangan Digital Guru:</label>
+            <div class="signature-container">
+                <canvas id="sig-canvas"></canvas>
+            </div>
+            <button type="button" class="btn-clear" onclick="clearSignature()">Hapus Tanda Tangan</button>
+        </div>
+
+        <button type="button" class="btn" onclick="generateAndDownloadPDF()">📱 Unduh Berita Acara (PDF)</button>
+    </form>
+</div>
+
+<!-- TEMPLATE CETAK PDF (Kop Teks Tanpa Logo Gambar) -->
+<div id="pdf-template">
+    <div class="header-kop">
+        <h3>PEMERINTAH KABUPATEN SIDOARJO</h3>
+        <h4>DINAS PENDIDIKAN DAN KEBUDAYAAN</h4>
+        <h4>SMP NEGERI 2 KREMBUNG</h4>
+        <p>Jl. Raya Krembung, Sidoarjo, Jawa Timur</p>
+    </div>
+
+    <div class="judul-ba">BERITA ACARA PELAKSANAAN KEGIATAN KOKURIKULER</div>
+
+    <p style="font-size: 11pt; line-height: 1.4; margin-bottom: 10px;">Pada hari ini, telah dilaksanakan kegiatan kokurikuler di SMP Negeri 2 Krembung dengan rincian sebagai berikut:</p>
+
+    <table class="table-data">
+        <tr>
+            <td class="label">Nama Fasilitator</td>
+            <td class="separator">:</td>
+            <td id="pdf-fasilitator"></td>
+        </tr>
+        <tr>
+            <td class="label">Kelas</td>
+            <td class="separator">:</td>
+            <td id="pdf-kelas"></td>
+        </tr>
+        <tr>
+            <td class="label">Isi Kegiatan</td>
+            <td class="separator">:</td>
+            <td id="pdf-kegiatan" style="text-align: justify;"></td>
+        </tr>
+    </table>
+
+    <p style="font-size: 11pt; font-weight: bold; margin: 10px 0 5px 0;">Dokumentasi Kegiatan:</p>
+    <div class="foto-container">
+        <img id="pdf-img" src="" alt="Foto Kegiatan">
+    </div>
+
+    <div class="ttd-section">
+        <p>Krembung, <span id="pdf-tanggal"></span></p>
+        <p>Fasilitator Kegiatan,</p>
+        <!-- Tanda Tangan Digital Hasil Canvas akan Dimasukkan ke Sini -->
+        <img id="pdf-ttd-img" class="ttd-image-pdf" src="" alt="Tanda Tangan">
+        <p><strong id="pdf-ttd-nama">( .................................... )</strong></p>
+    </div>
+</div>
+
+<script>
+    // --- SKRIP SKETSA TANDA TANGAN (CANVAS) ---
+    const canvas = document.getElementById('sig-canvas');
+    const ctx = canvas.getContext('2d');
+    let isDrawing = false;
+    let isSigned = false;
+
+    // Menyesuaikan resolusi canvas internal
+    function resizeCanvas() {
+        const ratio = Math.max(window.devicePixelRatio || 1, 1);
+        canvas.width = canvas.offsetWidth * ratio;
+        canvas.height = canvas.offsetHeight * ratio;
+        ctx.scale(ratio, ratio);
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = '#000000';
+    }
+    window.addEventListener('resize', resizeCanvas);
+    setTimeout(resizeCanvas, 200);
+
+    // Event Listener Mouse & Touch Layar HP
+    function getPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        return { x: clientX - rect.left, y: clientY - rect.top };
+    }
+
+    function startDrawing(e) {
+        isDrawing = true;
+        const pos = getPos(e);
+        ctx.beginPath();
+        ctx.moveTo(pos.x, pos.y);
+        e.preventDefault();
+    }
+
+    function draw(e) {
+        if (!isDrawing) return;
+        isSigned = true;
+        const pos = getPos(e);
+        ctx.lineTo(pos.x, pos.y);
+        ctx.stroke();
+        e.preventDefault();
+    }
+
+    function stopDrawing() { isDrawing = false; }
+
+    canvas.addEventListener('mousedown', startDrawing);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', stopDrawing);
+
+    canvas.addEventListener('touchstart', startDrawing);
+    canvas.addEventListener('touchmove', draw);
+    canvas.addEventListener('touchend', stopDrawing);
+
+    function clearSignature() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        isSigned = false;
+    }
+
+    // --- SKRIP GENERATE PDF ---
+    function generateAndDownloadPDF() {
+        const fasilitator = document.getElementById('fasilitator').value;
+        const kelas = document.getElementById('kelas').value;
+        const kegiatan = document.getElementById('kegiatan').value;
+        const fotoInput = document.getElementById('foto');
+
+        if (!fasilitator || !kelas || !kegiatan || fotoInput.files.length === 0) {
+            alert('Mohon lengkapi nama, kelas, isi kegiatan, dan unggah foto!');
+            return;
+        }
+
+        if (!isSigned) {
+            alert('Mohon bubuhkan tanda tangan Anda terlebih dahulu!');
+            return;
+        }
+
+        const btn = document.querySelector('.btn');
+        btn.innerText = 'Memproses PDF...';
+        btn.disabled = true;
+
+        // Populate Teks PDF
+        document.getElementById('pdf-fasilitator').innerText = fasilitator;
+        document.getElementById('pdf-kelas').innerText = kelas;
+        document.getElementById('pdf-kegiatan').innerText = kegiatan;
+        document.getElementById('pdf-ttd-nama').innerText = `( ${fasilitator} )`;
+
+        // Masukkan Hasil Tanda Tangan ke PDF Template
+        document.getElementById('pdf-ttd-img').src = canvas.toDataURL();
+
+        const today = new Date();
+        const options = { day: 'numeric', month: 'long', year: 'numeric' };
+        document.getElementById('pdf-tanggal').innerText = today.toLocaleDateString('id-ID', options);
+
+        // Process Foto Kegiatan
+        const file = fotoInput.files[0];
+        const reader = new FileReader();
+
+        reader.onload = function (e) {
+            document.getElementById('pdf-img').src = e.target.result;
+
+            const element = document.getElementById('pdf-template');
+            element.style.display = 'block';
+
+            const opt = {
+                margin:       [8, 10, 8, 10],
+                filename:     `Berita_Acara_${kelas}_${fasilitator}.pdf`,
+                image:        { type: 'jpeg', quality: 0.95 },
+                html2canvas:  { scale: 2, useCORS: true, scrollY: 0 },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            html2pdf().set(opt).from(element).save().then(() => {
+                element.style.display = 'none';
+                btn.innerText = '📱 Unduh Berita Acara (PDF)';
+                btn.disabled = false;
+            }).catch(err => {
+                alert('Gagal mengunduh PDF. Coba periksa kembali data Anda.');
+                element.style.display = 'none';
+                btn.innerText = '📱 Unduh Berita Acara (PDF)';
+                btn.disabled = false;
+            });
+        };
+
+        reader.readAsDataURL(file);
+    }
+</script>
+
+</body>
+</html>
