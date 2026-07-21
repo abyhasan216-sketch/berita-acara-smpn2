@@ -79,7 +79,7 @@
         }
         .btn:active { background: #143d24; transform: translateY(1px); }
         
-        /* TEMPLATE PDF (Tanpa Logo Tambahan) */
+        /* TEMPLATE PDF (Kop Teks Tanpa Logo Gambar) */
         #pdf-template { 
             display: none; 
             width: 700px; 
@@ -134,12 +134,13 @@
             <textarea id="kegiatan" placeholder="Tuliskan ringkasan kegiatan..." required></textarea>
         </div>
 
+        <!-- PERBAIKAN: Menghapus capture="environment" agar HP menampilkan pilihan Kamera & Galeri -->
         <div class="form-group">
             <label for="foto">Foto Kegiatan (Kamera / Galeri):</label>
-            <input type="file" id="foto" accept="image/*" capture="environment" required>
+            <input type="file" id="foto" accept="image/*" required>
         </div>
 
-        <!-- Kolom Tanda Tangan Langsung -->
+        <!-- Kolom Tanda Tangan Digital Langsung -->
         <div class="form-group">
             <label>Tanda Tangan Digital Guru:</label>
             <div class="signature-container">
@@ -152,7 +153,7 @@
     </form>
 </div>
 
-<!-- TEMPLATE CETAK PDF (Kop Teks Tanpa Logo Gambar) -->
+<!-- TEMPLATE CETAK PDF -->
 <div id="pdf-template">
     <div class="header-kop">
         <h3>PEMERINTAH KABUPATEN SIDOARJO</h3>
@@ -191,7 +192,6 @@
     <div class="ttd-section">
         <p>Krembung, <span id="pdf-tanggal"></span></p>
         <p>Fasilitator Kegiatan,</p>
-        <!-- Tanda Tangan Digital Hasil Canvas akan Dimasukkan ke Sini -->
         <img id="pdf-ttd-img" class="ttd-image-pdf" src="" alt="Tanda Tangan">
         <p><strong id="pdf-ttd-nama">( .................................... )</strong></p>
     </div>
@@ -204,7 +204,6 @@
     let isDrawing = false;
     let isSigned = false;
 
-    // Menyesuaikan resolusi canvas internal
     function resizeCanvas() {
         const ratio = Math.max(window.devicePixelRatio || 1, 1);
         canvas.width = canvas.offsetWidth * ratio;
@@ -217,7 +216,6 @@
     window.addEventListener('resize', resizeCanvas);
     setTimeout(resizeCanvas, 200);
 
-    // Event Listener Mouse & Touch Layar HP
     function getPos(e) {
         const rect = canvas.getBoundingClientRect();
         const clientX = e.touches ? e.touches[0].clientX : e.clientX;
@@ -278,20 +276,17 @@
         btn.innerText = 'Memproses PDF...';
         btn.disabled = true;
 
-        // Populate Teks PDF
         document.getElementById('pdf-fasilitator').innerText = fasilitator;
         document.getElementById('pdf-kelas').innerText = kelas;
         document.getElementById('pdf-kegiatan').innerText = kegiatan;
         document.getElementById('pdf-ttd-nama').innerText = `( ${fasilitator} )`;
 
-        // Masukkan Hasil Tanda Tangan ke PDF Template
         document.getElementById('pdf-ttd-img').src = canvas.toDataURL();
 
         const today = new Date();
         const options = { day: 'numeric', month: 'long', year: 'numeric' };
         document.getElementById('pdf-tanggal').innerText = today.toLocaleDateString('id-ID', options);
 
-        // Process Foto Kegiatan
         const file = fotoInput.files[0];
         const reader = new FileReader();
 
